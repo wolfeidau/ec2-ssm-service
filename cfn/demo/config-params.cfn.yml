@@ -1,0 +1,79 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: 'wolfeidau: demo configuration storage in SSM'
+
+Parameters:
+  AppName:
+    Type: String
+    Description: The name of the application.
+    Default: "demo"
+
+  Stage:
+    Type: String
+    Description: The stage where the application is running in, e.g., dev, prod.
+    Default: "dev"
+
+  Branch:
+    Type: String
+    Default: "main"
+
+  Component:
+    Type: String
+    Description: The component of the application, e.g., api, web, worker.
+    Default: "ci"
+
+  BuildkiteToken:
+    Type: String
+    Description: The Buildkite token for the agent.
+
+  HoneycombApiKey:
+    Type: String
+    Description: The Honeycomb API key for the application.
+
+Resources:
+  BuildkiteAgentConfigParam:
+    Type: "AWS::SSM::Parameter"
+    Properties:
+      Name: !Sub "/config/${Stage}/${Branch}/${AppName}/${Component}/config/buildkite-agent-cfg"
+      Type: "String"
+      Value: !Sub |
+        # The token from your Buildkite "Agents" page
+        token="${BuildkiteToken}"
+
+        # The name of the agent
+        name="%hostname-%spawn"
+
+        # Path to where the builds will run from
+        build-path="/var/lib/buildkite-agent/builds"
+
+        # Directory where the hook scripts are found
+        hooks-path="/etc/buildkite-agent/hooks"
+
+        # When plugins are installed they will be saved to this path
+        plugins-path="/etc/buildkite-agent/plugins"
+
+      Description: "Buildkite Agent Config"
+
+  HoneycombApiKeyEnvParam:
+    Type: "AWS::SSM::Parameter"
+    Properties:
+      Name: !Sub "/config/${Stage}/${Branch}/${AppName}/${Component}/env/OTEL_EXPORTER_OTLP_HEADERS"
+      Type: "String"
+      Value: !Sub "x-honeycomb-team=${HoneycombApiKey}"
+      Description: "Honeycomb API Key Environment Variable"
+
+  HoneycombServiceNameEnvParam:
+    Type: "AWS::SSM::Parameter"
+    Properties:
+      Name: !Sub "/config/${Stage}/${Branch}/${AppName}/${Component}/env/OTEL_SERVICE_NAME"
+      Type: "String"
+      Value: !Sub "${AppName}-${Component}"
+      Description: "Honeycomb Service Name Environment Variable"
+
+  HoneycombEndpointEnvParam:
+    Type: "AWS::SSM::Parameter"
+    Properties:
+      Name: !Sub "/config/${Stage}/${Branch}/${AppName}/${Component}/env/OTEL_EXPORTER_OTLP_ENDPOINT"
+      Type: "String"
+      Value: "https://api.honeycomb.io"
+      Description: "Honeycomb Endpoint Environment Variable"
