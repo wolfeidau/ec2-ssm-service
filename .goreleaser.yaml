@@ -20,9 +20,21 @@ builds:
       - CGO_ENABLED=0
     goos:
       - linux
-      - windows
       - darwin
-
+    goarch:
+      - amd64
+      - arm64
+    goamd64:
+      - v2
+    overrides:
+      - goos: linux
+        goarch: amd64
+        goamd64: ""
+        goarm64: ""
+      - goos: linux
+        goarch: arm64
+        goamd64: ""
+        goarm64: ""
 archives:
   - formats: [tar.gz]
     # this name template makes the OS and Arch compatible with the results of `uname`.
@@ -37,6 +49,9 @@ archives:
     format_overrides:
       - goos: windows
         formats: [zip]
+    files:
+      - "LICENSE"
+      - "README.md"
 
 changelog:
   sort: asc
@@ -45,9 +60,33 @@ changelog:
       - "^docs:"
       - "^test:"
 
-release:
-  footer: >-
-
-    ---
-
-    Released by [GoReleaser](https://github.com/goreleaser/goreleaser).
+nfpms:
+  - file_name_template: "ec2-ssm-service-v{{ .Version }}-{{.Os}}-{{.Arch}}"
+    vendor: Mark Wolfe
+    homepage: https://wolfe.id.au
+    maintainer: Mark Wolfe <mark@wolfe.id.au>
+    description: Downloads configuration files, and env files from SSM and writes them to the local system.
+    license: Apache2.0
+    formats:
+      - deb
+      - rpm
+    contents:
+      - src: ./packaging/linux/ec2-ssm.yaml
+        dst: /etc/ec2-ssm/ec2-ssm.yaml
+        type: 'config|noreplace'
+      - src: ./packaging/linux/ec2-ssm-env.service
+        dst: /etc/systemd/system/ec2-ssm-env.service
+      - src: ./packaging/linux/ec2-ssm-config.service
+        dst: /etc/systemd/system/ec2-ssm-config.service
+    bindir: /usr/bin
+    
+      # - src: ./dist/ec2-ssm-service_{{.Os}}_{{.Arch}}{{ with .Amd64 }}_{{ . }}{{ end}}/ec2-ssm-service
+      #   dst: /usr/bin/ec2-ssm-service
+    # rpm:
+    #   signature:
+    #     # Also set ${NFPM_DEFAULT_PASSPHRASE}
+    #     key_file: '{{ .Env.NFPM_SIGNING_KEY_FILE }}'
+    # deb:
+    #   signature:
+    #     # Also set ${NFPM_DEFAULT_PASSPHRASE}
+    #     key_file: '{{ .Env.NFPM_SIGNING_KEY_FILE }}'
