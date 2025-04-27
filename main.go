@@ -12,21 +12,26 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-var cli struct {
-	Version kong.VersionFlag
-	DryRun  bool `help:"Dry run, do not write any files"`
-	// an array of key value pairs containing an SSM key and a path to a file
-	Config struct {
-		ConfigFile map[string]string `arg:"" type:":file" help:"SSM key and configuration path pairs"`
-	} `cmd:"" help:"Write configuration files from SSM parameters"`
-	Env struct {
-		EnvFile map[string]string `arg:"" type:":file" help:"Environment file path"`
-	} `cmd:"" help:"Write environment files from SSM parameters"`
-}
+var (
+	version = "dev"
+
+	cli struct {
+		Version kong.VersionFlag
+		DryRun  bool `help:"Dry run, do not write any files"`
+		// an array of key value pairs containing an SSM key and a path to a file
+		Config struct {
+			ConfigFile map[string]string `arg:"" type:":file" help:"SSM key and configuration path pairs"`
+		} `cmd:"" help:"Write configuration files from SSM parameters"`
+		Env struct {
+			EnvFile map[string]string `arg:"" type:":file" help:"Environment file path"`
+		} `cmd:"" help:"Write environment files from SSM parameters"`
+	}
+)
 
 func main() {
 	ctx := context.Background()
 	cliCtx := kong.Parse(&cli,
+		kong.Vars{"version": version},
 		kong.Configuration(
 			kong.JSON,
 			"/etc/ec2-ssm-config-service.yaml",
