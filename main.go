@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
+	"io"
 	"os"
 
 	"github.com/alecthomas/kong"
 	kongyaml "github.com/alecthomas/kong-yaml"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/rs/zerolog/log"
 	"github.com/wolfeidau/ec2-ssm-service/internal/ssmfile"
@@ -17,9 +19,10 @@ var (
 	version = "dev"
 
 	cli struct {
-		Version kong.VersionFlag
-		DryRun  bool  `help:"Dry run, do not write any files"`
-		Batch   int32 `help:"Batch size for fetching SSM parameters" default:"10"`
+		Version      kong.VersionFlag
+		DryRun       bool  `help:"Dry run, do not write any files"`
+		Batch        int32 `flag:"batch" help:"Batch size for fetching SSM parameters" default:"10"`
+		EC2Discovery bool  `flag:"ec2-discovery" help:"Enable EC2 metadata discovery"`
 		// an array of key value pairs containing an SSM key and a path to a file
 		// the key is the SSM parameter name and the value is the path to the file
 		// the path is relative to the root of the filesystem
@@ -45,6 +48,21 @@ func main() {
 	awscfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to load aws config")
+	}
+
+	if cli.EC2Discovery {
+		client := imds.NewFromConfig(awscfg)
+
+		region, err := client.GetMetadata(context.TODO(), &imds.GetMetadataInput{
+			Path: "placement/region",
+		})
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to get AWS Region in which the instance is launched")
+		}
+
+		content, _ := io.ReadAll(region.Content)
+
+		awscfg.Region = string(content)
 	}
 
 	// new aws sdkv2 client
