@@ -61,7 +61,7 @@ changelog:
       - "^test:"
 
 nfpms:
-  - file_name_template: "ec2-ssm-service-v{{ .Version }}-{{.Os}}-{{.Arch}}"
+  - file_name_template: "ec2-ssm-service-{{.Os}}-{{.Arch}}"
     vendor: Mark Wolfe
     homepage: https://wolfe.id.au
     maintainer: Mark Wolfe <mark@wolfe.id.au>
