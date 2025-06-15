@@ -17,6 +17,7 @@ import (
 const (
 	envFilePerm    = 0644
 	configFilePerm = 0644
+	defaultBatch   = 10
 )
 
 type SSMClient interface {
@@ -26,11 +27,18 @@ type SSMClient interface {
 
 type Batcher struct {
 	ssmsvc SSMClient // aws sdk v2 ssm client
+	batch  int32
 }
 
-func NewBatcher(ssmsvc SSMClient) *Batcher {
+func NewBatcher(ssmsvc SSMClient, batch int32) *Batcher {
+
+	if batch == 0 {
+		batch = defaultBatch
+	}
+
 	return &Batcher{
 		ssmsvc: ssmsvc,
+		batch:  batch,
 	}
 }
 
@@ -64,21 +72,26 @@ func (bt *Batcher) WriteEnvFiles(ctx context.Context, envFiles map[string]string
 
 	// for each env file
 	for envPath, envFile := range envFiles {
+		log.Info().Str("envPath", envPath).Msg("loading env")
+
 		// get all keys below the path
 		getRes, err := bt.ssmsvc.GetParametersByPath(ctx, &ssm.GetParametersByPathInput{
 			Path:           aws.String(envPath),
 			Recursive:      aws.Bool(true),
 			WithDecryption: aws.Bool(true),
-			MaxResults:     aws.Int32(10),
+			MaxResults:     aws.Int32(bt.batch),
 		})
 		if err != nil {
 			return fmt.Errorf("failed to get parameters by path: %w", err)
 		}
 
+		log.Info().Int("Parameters", len(getRes.Parameters)).Msg("got params")
+
 		// for each value trim the path and build a list of envs to write to a file
 		envs := make(map[string]string)
 		for _, param := range getRes.Parameters {
-			envName := strings.TrimPrefix(aws.ToString(param.Name), envPath)
+			envName := trimEnv(aws.ToString(param.Name), envPath)
+			log.Info().Str("envName", envName).Msg("adding env")
 			envs[envName] = aws.ToString(param.Value)
 		}
 
@@ -123,4 +136,18 @@ func writeEnvFile(envFile string, envs map[string]string) error {
 	}
 
 	return nil
+}
+
+// trimEnv converts an SSM parameter name to an environment variable name by removing
+// the base path prefix, trimming leading slashes, and converting to uppercase.
+//
+// For example:
+//   - parameterName: "/app/database/HOST", basePath: "/app/database" -> "HOST"
+//   - parameterName: "/app/api/port", basePath: "/app" -> "API_PORT"
+func trimEnv(parameterName, basePath string) string {
+	env := strings.TrimPrefix(parameterName, basePath)
+	env = strings.TrimLeft(env, "/")
+	env = strings.ReplaceAll(env, "/", "_")
+	env = strings.ToUpper(env)
+	return env
 }

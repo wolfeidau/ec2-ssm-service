@@ -415,3 +415,69 @@ func (m *mockSSMClient) GetParametersByPath(ctx context.Context, input *ssm.GetP
 	}
 	return nil, fmt.Errorf("getParametersByPathFunc not implemented")
 }
+func TestTrimEnv(t *testing.T) {
+	tests := []struct {
+		name          string
+		parameterName string
+		basePath      string
+		expected      string
+	}{
+		{
+			name:          "simple path trimming",
+			parameterName: "/aws/dev/database/password",
+			basePath:      "/aws/dev",
+			expected:      "DATABASE_PASSWORD",
+		},
+		{
+			name:          "empty path",
+			parameterName: "/test/value",
+			basePath:      "",
+			expected:      "TEST_VALUE",
+		},
+		{
+			name:          "path equals env",
+			parameterName: "/aws/prod",
+			basePath:      "/aws/prod",
+			expected:      "",
+		},
+		{
+			name:          "multiple leading slashes",
+			parameterName: "///test/param",
+			basePath:      "/",
+			expected:      "TEST_PARAM",
+		},
+		{
+			name:          "path with trailing slash",
+			parameterName: "/aws/staging/config",
+			basePath:      "/aws/staging",
+			expected:      "CONFIG",
+		},
+		{
+			name:          "case conversion",
+			parameterName: "/aws/test/mixedCase/param",
+			basePath:      "/aws/test",
+			expected:      "MIXEDCASE_PARAM",
+		},
+		{
+			name:          "path not in env",
+			parameterName: "/different/path/value",
+			basePath:      "/aws/test",
+			expected:      "DIFFERENT_PATH_VALUE",
+		},
+		{
+			name:          "special characters",
+			parameterName: "/aws/test/special-chars_123",
+			basePath:      "/aws/test",
+			expected:      "SPECIAL-CHARS_123",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := trimEnv(tt.parameterName, tt.basePath)
+			if result != tt.expected {
+				t.Errorf("trimEnv() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}

@@ -1,0 +1,4 @@
+configs:
+    /dev/main/ci/blah/config/blah-cfg: /etc/blah/blah.cfg
+env-files:
+    /dev/main/ci/blah/env: /etc/blah/blah.env
