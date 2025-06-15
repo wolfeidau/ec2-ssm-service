@@ -22,7 +22,7 @@ var (
 		Version      kong.VersionFlag
 		DryRun       bool  `help:"Dry run, do not write any files"`
 		Batch        int32 `flag:"batch" help:"Batch size for fetching SSM parameters" default:"10"`
-		EC2Discovery bool  `flag:"ec2-discovery" help:"Enable EC2 metadata discovery"`
+		EC2Discovery bool  `name:"ec2-discovery" help:"Enable EC2 metadata discovery"`
 		// an array of key value pairs containing an SSM key and a path to a file
 		// the key is the SSM parameter name and the value is the path to the file
 		// the path is relative to the root of the filesystem
