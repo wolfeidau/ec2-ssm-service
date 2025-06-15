@@ -71,11 +71,9 @@ nfpms:
       - deb
       - rpm
     contents:
-      - src: ./packaging/linux/ec2-ssm.yaml
-        dst: /etc/ec2-ssm/ec2-ssm.yaml
+      - src: ./packaging/linux/ec2-ssm-config-service.yaml
+        dst: /etc/ec2-ssm-config-service.yaml
         type: 'config|noreplace'
-      - src: ./packaging/linux/ec2-ssm-env.service
-        dst: /etc/systemd/system/ec2-ssm-env.service
       - src: ./packaging/linux/ec2-ssm-config.service
         dst: /etc/systemd/system/ec2-ssm-config.service
     bindir: /usr/bin

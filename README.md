@@ -5,12 +5,10 @@ This is a cli command which which downloads configuration files, and env files f
 # configuration
 
 ```
-config:
-    configfile:
-        /etc/blah/blah.cfg: /dev/main/ci/blah-cfg
-env:
-    envfile:
-        /etc/blah/blah.env: /dev/main/ci/blah
+configs:
+    /dev/main/ci/blah/config/blah-cfg: /etc/blah/blah.cfg
+env-files:
+    /dev/main/ci/blah/env: /etc/blah/blah.env
 ```
 
 # Usage
@@ -43,6 +41,13 @@ The key directives are:
 2. `Requires=ec2-ssm-config.service` - This creates a strong dependency. If ec2-ssm-config.service fails, this service won't start. If this service is started, ec2-ssm-config.service will be started first if it's not already running.
 
 Since ec2-ssm-config.service is configured as `Type=oneshot` with `RemainAfterExit=yes`, `systemd` will consider it "started" only after the command has completed successfully, ensuring your dependent service starts only after the configuration has been fully applied to the system.
+
+# Install
+
+```bash
+curl -L https://github.com/wolfeidau/ec2-ssm-service/releases/download/v0.1.0/ec2-ssm-service-v0.1.0-linux-arm64.deb -o /tmp/ec2-ssm-service-v0.1.0-linux-arm64.deb
+dpkg -i /tmp/ec2-ssm-service-v0.1.0-linux-arm64.deb
+```
 
 # License
 

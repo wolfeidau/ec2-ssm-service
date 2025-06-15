@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/alecthomas/kong"
+	kongyaml "github.com/alecthomas/kong-yaml"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/rs/zerolog/log"
@@ -17,23 +18,25 @@ var (
 
 	cli struct {
 		Version kong.VersionFlag
-		DryRun  bool `help:"Dry run, do not write any files"`
+		DryRun  bool  `help:"Dry run, do not write any files"`
+		Batch   int32 `help:"Batch size for fetching SSM parameters" default:"10"`
 		// an array of key value pairs containing an SSM key and a path to a file
-		Config struct {
-			ConfigFile map[string]string `arg:"" type:":file" help:"SSM key and configuration path pairs"`
-		} `cmd:"" help:"Write configuration files from SSM parameters"`
-		Env struct {
-			EnvFile map[string]string `arg:"" type:":file" help:"Environment file path"`
-		} `cmd:"" help:"Write environment files from SSM parameters"`
+		// the key is the SSM parameter name and the value is the path to the file
+		// the path is relative to the root of the filesystem
+		Configs map[string]string `flag:"config" help:"SSM key and configuration target path" yaml:"configs"`
+		// an array of key value pairs containing an SSM key and a path to a file
+		// the key is the SSM parameter name and the value is the path to the file
+		// the path is relative to the root of the filesystem
+		EnvFiles map[string]string `flag:"env-file" help:"SSM key prefix for environment variables and env file target path" yaml:"env-files"`
 	}
 )
 
 func main() {
 	ctx := context.Background()
-	cliCtx := kong.Parse(&cli,
+	kong.Parse(&cli,
 		kong.Vars{"version": version},
 		kong.Configuration(
-			kong.JSON,
+			kongyaml.Loader,
 			"/etc/ec2-ssm-config-service.yaml",
 			"~/.ec2-ssm-config-service.yaml",
 		),
@@ -48,7 +51,7 @@ func main() {
 	ssmsvc := ssm.NewFromConfig(awscfg)
 
 	// new ssmfile batcher
-	bt := ssmfile.NewBatcher(ssmsvc)
+	bt := ssmfile.NewBatcher(ssmsvc, cli.Batch)
 
 	if cli.DryRun {
 		log.Info().Msg("dry run enabled, not writing any files")
@@ -61,18 +64,14 @@ func main() {
 		return
 	}
 
-	switch cliCtx.Command() {
-	case "config <config-file>":
+	// write the configs to the files
+	if err := bt.WriteConfigs(ctx, cli.Configs); err != nil {
+		log.Fatal().Err(err).Msg("failed to write config files")
+	}
 
-		// write the configs to the files
-		if err := bt.WriteConfigs(ctx, cli.Config.ConfigFile); err != nil {
-			log.Fatal().Err(err).Msg("failed to write config files")
-		}
-	case "env <env-file>":
-		// write the environment variables to the files
-		if err := bt.WriteEnvFiles(ctx, cli.Env.EnvFile); err != nil {
-			log.Fatal().Err(err).Msg("failed to write environment files")
-		}
+	// write the environment variables to the files
+	if err := bt.WriteEnvFiles(ctx, cli.EnvFiles); err != nil {
+		log.Fatal().Err(err).Msg("failed to write environment files")
 	}
 
 }
