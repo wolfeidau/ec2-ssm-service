@@ -6,7 +6,7 @@ After=network.target
 # run the command once at boot
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/ec2-ssm-service
+ExecStart=/usr/bin/ec2-ssm-service --ec2-discovery
 RemainAfterExit=yes
 
 [Install]
